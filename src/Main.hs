@@ -11,6 +11,9 @@ But you should not look in the code and rather try to solve the problems yoursel
 This repository is just an off-site backup of my code. It is not meant to spoil somenone 
 else the fun of solving the problems.
 
+Current state:
+http://projecteuler.net/profile/stefan.schwetschke.png
+
 *****************************************************
 -}
 module Main where
