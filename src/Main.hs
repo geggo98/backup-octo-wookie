@@ -8,6 +8,8 @@ You are technically and legally allowed to read and use this code as you please.
 
 But you should not look in the code and rather try to solve the problems yourself.
 
+Oh and btw. I might have inserted some "errors", so the results might be not 100% correct :-)
+
 This repository is just an off-site backup of my code. It is not meant to spoil somenone 
 else the fun of solving the problems.
 
@@ -26,6 +28,7 @@ import Data.List.Split (splitOn)
 --import qualified Data.Array.Repa as R -- Currently no repa on FPcomplete available
 import qualified Data.Vector as V 
 import Data.List (nub)
+import qualified Data.HashMap.Strict as Map
 
 -- Problem 1
 problem1 = foldl (+) 0 [x | x <- [1 .. 999], x `mod` 3 == 0 || x `mod` 5 == 0 ] 
@@ -155,18 +158,37 @@ problem11 = maximum $ map (product) $ map (map (\(x,y) -> inputMatrix V.! y V.! 
     where
         d = V.length inputMatrix
         inputList = map (map (\s -> read s :: Int)) $ map (splitOn " ") $ splitOn "|" input11raw
-        inputMatrix = V.fromList $ map (V.fromList) inputList    
-        direction = [(dx,dy) | dx <- [-1,0,1], dy <- [-1,0,1] ]
-        step (x,y) (dx,dy) = (x+dx, y+dy)
-        allDeltas = [scanl (step) (0,0) [d1, d2, d3, d4] | d1 <- direction, d2 <- direction, d3 <- direction, d4 <- direction]
-        uniqueDeltas = nub $ filter (\l -> length l == 4) $ map (nub) $ filter (all (\(x,y) -> x>=0 && y>=0)) allDeltas
-        -- The question in deed only wants the direct lines: left, right, and the two diagonals. This malkes things much easier
+        inputMatrix = V.fromList $ map (V.fromList) inputList
         directDeltas=[[(0,0),(0,1),(0,2),(0,3)],[(0,0),(1,0),(2,0),(3,0)],[(0,0),(1,1),(2,2),(3,3)], [(3,0),(2,1),(1,2),(0,3)]]
         allIndexes = [ map (\(dx,dy) -> (x+dx, y+dy)) delta | x <- [0..d-1], y <- [0..d-1], delta <- directDeltas]
         indexes = filter (all (\(x,y) -> x<d && y<d)) allIndexes
 
+-- Problem 12
+
+-- primeFactors x = primeFactors (nPrimes (sqrt x) x
+intSquareRoot :: Int -> Int
+intSquareRoot = floor . sqrt . (fromIntegral :: Int -> Double)
+
+-- Result is a list of tuple (factor, multiplicity)
+-- primeFactors n = primeFactors' n (primesToA $ intSquareRoot n) []
+primeFactors' :: Int ->  [Integer] ->  [(Int,Int)] -> [(Int,Int)]
+primeFactors' 1 _ fs = fs
+primeFactors' _ [] _ = error "Not enough prime factors given"
+primeFactors' n primes ((f,m):fs)
+    |  n `mod` f == 0 = primeFactors'  (n `div` f) primes ((f, m+1):fs)
+primeFactors' n (p:ps) factors
+    | n `mod` (fromIntegral p) == 0 = primeFactors' n ps ((fromIntegral p,0):factors)
+    | otherwise = primeFactors' n ps factors
+
+
+problem12 = head . filter (\ n -> numOfDivisors n > 500) $ triangulars
+    where
+        primes = nPrimes 5000
+        primeFactors x = primeFactors' x primes []
+        numOfDivisors = product . map (1+) . map snd . primeFactors
+        triangulars = [n*(n+1) `div` 2 | n <- [1..]]
 
 -- | The main entry point.
 main :: IO ()
-main = putStrLn $ show $ problem11
+main = putStrLn $ show $ problem12
 

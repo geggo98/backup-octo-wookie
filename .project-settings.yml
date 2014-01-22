@@ -1,14 +1,14 @@
-extensions: {}
-cabal-file: project.cabal
-extra-packages: ! 'repa-3.2.3.3
-
-'
-version: 1
-environment: ghc-7.4.2-stable-13.06
 module-template: ! 'module MODULE_NAME where
 
 '
+extensions: {}
+environment: ghc-7.4.2-stable-13.09
+cabal-file: project.cabal
+hidden-packages: ''
+version: 1
+extra-packages: ! 'Hackage: repa
+
+
+'
 ghc-args: []
-modules:
-  Main(src/Main.hs):
-    filename: src/Main.hs
+excluded-modules: []
