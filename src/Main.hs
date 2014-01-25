@@ -21,14 +21,32 @@ http://projecteuler.net/profile/stefan.schwetschke.png
 module Main where
 
 {-# OPTIONS_GHC -O2 #-}
+import Data.Int (Int64)
 import Data.Array.Unboxed
 import Data.Foldable (maximumBy, toList)
 import qualified Data.Sequence as Seq
-import Data.List.Split (splitOn, splitEvery)
+
+import Data.List (maximumBy)
+import Data.Function (on)
+
+import Data.List.Split (splitOn, chunksOf)
 --import qualified Data.Array.Repa as R -- Currently no repa on FPcomplete available
-import qualified Data.Vector as V 
+import qualified Data.Vector as V
+import qualified Data.Vector.Unboxed as U
 import Data.List (nub)
 import qualified Data.HashMap.Strict as Map
+
+import Data.List
+import Data.Ord
+import qualified Data.MemoCombinators as Memo
+
+import Data.Array.ST
+import Data.Array.Base
+import Control.Monad.ST
+import Data.Bits
+
+import Numeric.SpecFunctions (factorial)
+
 
 -- Problem 1
 problem1 = foldl (+) 0 [x | x <- [1 .. 999], x `mod` 3 == 0 || x `mod` 5 == 0 ] 
@@ -42,7 +60,7 @@ problem2 = foldl (+) 0 $ filter (\x -> x `mod` 2 == 0) $ takeWhile (<= 4000000) 
 primesToA m = sieve 3 (array (3,m) [(i,odd i) | i<-[3..m]]
                         :: UArray Int Bool)
   where
-    sieve p a 
+    sieve p a
       | p*p > m   = 2 : [i | (i,True) <- assocs a]
       | a!p       = sieve (p+2) $ a//[(i,False) | i <- [p*p, p*p+2*p..m]]
       | otherwise = sieve (p+2) a
@@ -52,7 +70,7 @@ problem3 = head $ reverse $ filter (\x -> 600851475143 `mod` x == 0) $ primesToA
 -- Problem 4
 isPalindrom x = (show x) == (reverse $ show x)
 
-problem4 = maximum $ [x*y | x <- [100 .. 999], y <- [100 .. 999], 
+problem4 = maximum $ [x*y | x <- [100 .. 999], y <- [100 .. 999],
     isPalindrom $ x * y]
 
 -- Problem 5
@@ -222,13 +240,50 @@ input13raw="\
 \53503534226472524250874054075591789781264330331690"
 
 
-input13 = map (\s -> read s :: Integer) $ splitEvery 50 input13raw
+input13 = map (\s -> read s :: Integer) $ chunksOf 50 input13raw
 problem13 = take 10 $ show $ sum input13
 
 -- Problem 14
+toInt i = (fromIntegral i) :: Int
+toInt64 i = (fromIntegral i) :: Int64
+
+collatzLength :: Integer -> Integer -> Integer
+collatzLength cacheSize n = collatzLengthCached n
+    where
+        collatzLengthCached :: Integer -> Integer
+        collatzLengthCached = (Memo.arrayRange $! (1,cacheSize)) collatzLengthCached'
+        collatzLengthCached' n
+            | n < 1  = 0 -- error "Number too low"
+            | n == 1 = 1
+            | odd n  = 1 + collatzLengthCached (3 * n + 1)
+            | even n = 1 + collatzLengthCached (n `div` 4)
+
+collatzLengthCached :: Integer -> Integer
+collatzLengthCached = Memo.arrayRange (1,10000000) collatzLengthCached'
+    where
+        collatzLengthCached' n
+            | n < 1  = 0 -- error "Number too low"
+            | n == 1 = 1
+            | odd n  = 1 + collatzLengthCached (3 * n + 1)
+            | even n = 1 + collatzLengthCached (n `div` 4)
+
+problem14 =
+    let size = 999999
+        in
+        foldl1' max $ [(collatzLengthCached n, n) | n <- [1..size]]
+
+-- Problem 15
+problem15 = map numMoves [1,2,3,20]
+    where
+        numMoves i = factorialInt (i*2) `div` sqr (factorialInt i)
+        sqr i = i * i
+        factorialInt i = product [0..i]
+
+-- Problem 16
 
 
 -- | The main entry point.
 main :: IO ()
-main = putStrLn $ show $ problem13
+main = putStrLn $ show $ problem15
+
 
