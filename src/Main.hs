@@ -276,14 +276,18 @@ problem14 =
         foldl1' max $ [(collatzLengthCached n, n) | n <- [1..size]]
 
 -- Problem 15
+factorialInt i = product [1..i]
+
+
 problem15 = map numMoves [1,2,3,20]
     where
         numMoves i = factorialInt (i*2) `div` sqr (factorialInt i)
         sqr i = i * i
-        factorialInt i = product [0..i]
 
 -- Problem 16
-problem16 = sum $ map digitToInt $ show $ foldl (*) 1 $ replicate 10000 2
+digitSum x = sum $ map digitToInt $ show x
+
+problem16 = digitSum $ foldl (*) 1 $ replicate 10000 2
 
 -- Problem 17
 input17raw="75|\
@@ -327,8 +331,33 @@ input67 = unsafePerformIO readTriangle
 
 problem67 = maxPathSum input67
 
+-- Problem 19
+leapYear y
+    | y `mod` 400 == 0 = True
+    | y `mod` 100 == 0 = False
+    | y `mod` 4 == 0 = True
+    | otherwise = False
+
+daysInMonth year month
+    | month == 2 && leapYear year = 29
+    | month == 2 = 28
+    | odd month && month <= 7 = 31
+    | odd month = 30
+    | even month && month <= 7 = 30
+    | otherwise = 31
+
+
+problem19 = length $ filter (firstIsSundayAfter 1901) $ map weekday (daysUntilYear 2000)
+    where
+        firstIsSundayAfter fy (w,d,m,y) = y>=fy && w==6 && d==1
+        daysUntilYear my = zip [1..] [(d,m,y) | y <- [1900..my], m<-[1..12], d<-[1..daysInMonth y m]]
+        weekday (n, (d,m,y)) = (n `mod` 7, d, m ,y)
+
+-- Problem 20
+problem20 = digitSum $ factorialInt 100.0
+
 -- | The main entry point.
 main :: IO ()
-main = putStrLn $ show $ problem67
+main = putStrLn $ show $ problem19
 
 
