@@ -51,8 +51,10 @@ import Numeric.SpecFunctions (factorial)
 
 import System.IO.Unsafe
 
+import ONeillPrimes (primesToLimit, primes)
+
 -- Problem 1
-problem1 = foldl (+) 0 [x | x <- [1 .. 999], x `mod` 3 == 0 || x `mod` 5 == 0 ] 
+problem1 = foldl (+) 0 [x | x <- [1 .. 999], x `mod` 3 == 0 || x `mod` 5 == 0 ]
 
 -- Problem 2
 fibs = 0 : 1 : zipWith (+) fibs (tail fibs)
@@ -95,7 +97,7 @@ problem6 = (squareSum 100) - (sumOfSquares 100)
 nPrimes n = toList $ nPrimes' (Seq.fromList [2,3,5,7,11,13,17]) 19 n
 
 nPrimes' :: Seq.Seq Integer -> Integer -> Int -> Seq.Seq Integer
-nPrimes' primes i n 
+nPrimes' primes i n
     | isPrime' primes i && (Seq.length primes)+1>=n = primes Seq.|> i
     | isPrime' primes i = nPrimes' (primes Seq.|> i) (i+2) n
     | otherwise = nPrimes' primes (i+2) n
@@ -142,7 +144,7 @@ problem8 = foldr (max) 0 $ map (foldr (*) 1) $ map (take 5) $ paramorphism phi [
 
 problem9 = [(a,b,dist a b, round(a*b*dist a b)) | a <- [1..1000], b <- [1..1000], sqr(a)+sqr(b)==sqr(1000-a-b)]
     where
-        dist a b = sqrt(sqr(a)+sqr(b)) 
+        dist a b = sqrt(sqr(a)+sqr(b))
         sqr x = x*x
 
 -- Problem10
@@ -192,20 +194,25 @@ intSquareRoot = floor . sqrt . (fromIntegral :: Int -> Double)
 
 -- Result is a list of tuple (factor, multiplicity)
 -- primeFactors n = primeFactors' n (primesToA $ intSquareRoot n) []
-primeFactors' :: Int ->  [Integer] ->  [(Int,Int)] -> [(Int,Int)]
-primeFactors' 1 _ fs = fs
-primeFactors' _ [] _ = error "Not enough prime factors given"
-primeFactors' n primes ((f,m):fs)
-    |  n `mod` f == 0 = primeFactors'  (n `div` f) primes ((f, m+1):fs)
-primeFactors' n (p:ps) factors
-    | n `mod` (fromIntegral p) == 0 = primeFactors' n ps ((fromIntegral p,0):factors)
-    | otherwise = primeFactors' n ps factors
+primeFactors :: Int -> [(Int, Int)]
+primeFactors = Memo.integral primeFactors'
+primeFactors' 1 = []
+primeFactors' x = mergePrimes p $ primeFactors $ x `div` p
+    where
+        p = findPrimeFactor x
 
+findPrimeFactor x = case [p | p <- primesToLimit $ fromIntegral $ 1 + intSquareRoot x, x `mod` p == 0] of
+    [] -> x
+    p:_ -> p
+
+mergePrimes x [] = [(x,1)]
+mergePrimes x ps@(pt@(p,m):pr)
+    | p==x      = (p,m+1):pr
+    | p>x       = (x,1) : ps
+    | otherwise = pt : mergePrimes x pr
 
 problem12 = head . filter (\ n -> numOfDivisors n > 500) $ triangulars
     where
-        primes = nPrimes 5000
-        primeFactors x = primeFactors' x primes []
         numOfDivisors = product . map (1+) . map snd . primeFactors
         triangulars = [n*(n+1) `div` 2 | n <- [1..]]
 
@@ -250,9 +257,10 @@ problem13 = take 10 $ show $ sum input13
 toInt i = (fromIntegral i) :: Int
 toInt64 i = (fromIntegral i) :: Int64
 
-collatzLength :: Integer -> Integer -> Integer
-collatzLength cacheSize n = collatzLengthCached n
+collatzLength :: Integer -> Integer
+collatzLength n = collatzLengthCached n
     where
+        cacheSize = 1000000
         collatzLengthCached :: Integer -> Integer
         collatzLengthCached = (Memo.arrayRange $! (1,cacheSize)) collatzLengthCached'
         collatzLengthCached' n
@@ -356,8 +364,39 @@ problem19 = length $ filter (firstIsSundayAfter 1901) $ map weekday (daysUntilYe
 -- Problem 20
 problem20 = digitSum $ factorialInt 100.0
 
+-- Problem 21
+iterateN :: Int -> (a -> a) -> a -> [a]
+iterateN n f = take n . iterate f
+
+divisors :: Int -> [Int]
+divisors x = divisors' $ primeFactors x
+    where
+        divisors' [] = [1]
+        divisors' ((f,m):xs) = [a*b | a <- iterateN (m+1) (f*) 1, b <- divisors' xs]
+
+problem21 = [(n,s) | n <- [2..10000], let s = d(n), s /= n, s <= 10000, n == d(s)]
+    where
+        d n = sum (divisors n)
+
+-- Problem 24
+perm :: [a] -> [[a]]
+perm [] = [[]]
+perm (x:xs) = perm' [] x xs
+    where
+        perm' before c rest = (map (c:) (perm (before++rest))) ++ (permNext before c rest)
+        permNext before c (r:rs) = perm' (before++[c]) r rs
+        permNext _ _ [] = []
+
+problem24' = head $ drop 999999 $ sort $ permutations [1..9]
+problem24 = head $ drop (10^6-1) $ perm [1..9]
+
+-- Problem 25
+problem25 = head $ dropWhile (\x -> length (snd x) < 1000) $ zip [1..] $ map show fibs
+
+
+
 -- | The main entry point.
 main :: IO ()
-main = putStrLn $ show $ problem19
+main = putStrLn $ show $ map primeFactors [1..10000]
 
 
