@@ -35,13 +35,15 @@ import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as U
 import Data.List (nub)
 import qualified Data.HashMap.Strict as Map
+import Data.Foldable (forM_)
 
 import Data.List
 import Data.Ord
 import qualified Data.MemoCombinators as Memo
 
+import Data.Array as A
 import Data.Array.ST
-import Data.Array.Base
+import Data.Array.Base as B
 import Control.Monad.ST
 import Data.Bits
 
@@ -62,12 +64,12 @@ problem2 = foldl (+) 0 $ filter (\x -> x `mod` 2 == 0) $ takeWhile (<= 4000000) 
 
 -- Problem 3
 -- primes = 2 : 3 : ([5,7..] `minus` unionAll [[p*p, p*p+2*p..] | p <- tail primes])
-primesToA m = sieve 3 (array (3,m) [(i,odd i) | i<-[3..m]]
+primesToA m = sieve 3 (B.array (3,m) [(i,odd i) | i<-[3..m]]
                         :: UArray Int Bool)
   where
     sieve p a
-      | p*p > m   = 2 : [i | (i,True) <- assocs a]
-      | a!p       = sieve (p+2) $ a//[(i,False) | i <- [p*p, p*p+2*p..m]]
+      | p*p > m   = 2 : [i | (i,True) <- B.assocs a]
+      | a B.! p       = sieve (p+2) $ a B.// [(i,False) | i <- [p*p, p*p+2*p..m]]
       | otherwise = sieve (p+2) a
 
 problem3 = head $ reverse $ filter (\x -> 600851475143 `mod` x == 0) $ primesToA $ floor  $ sqrt 600851475143
@@ -368,15 +370,47 @@ problem20 = digitSum $ factorialInt 100.0
 iterateN :: Int -> (a -> a) -> a -> [a]
 iterateN n f = take n . iterate f
 
+properDivisors x = filter (x/=) $ divisors x
+
 divisors :: Int -> [Int]
 divisors x = divisors' $ primeFactors x
     where
         divisors' [] = [1]
         divisors' ((f,m):xs) = [a*b | a <- iterateN (m+1) (f*) 1, b <- divisors' xs]
 
-problem21 = [(n,s) | n <- [2..10000], let s = d(n), s /= n, s <= 10000, n == d(s)]
+problem21 = sum [n | n <- [2..10000], let s = d(n), s /= n, s <= 10000, n == d(s)]
     where
-        d n = sum (divisors n)
+        d n = (sum.divisors) n
+
+-- Problem 23
+isAbundant = Memo.integral isAbundant'
+    where
+        isAbundant' n = (sum.properDivisors) n > n
+
+uniq [] = []
+uniq xs@(x:[]) = xs
+uniq (x1:x2:xs)
+    | x1 == x2 = uniq (x2:xs)
+    | otherwise = x1 : uniq (x2:xs)
+
+problem23 = sum notSumAbundants
+    where
+        limit = 28123
+        isSumAbundant n = or [isAbundant s2 | s1 <- takeWhile ((n `div` 2)+1>) abundants, let s2=n-s1]
+        --notSumAbundants = [n | n<-[1..limit], not $ isSumAbundant n]
+        --sumAbundants = [s1+s2 | s1 <- abundants, s2 <- dropWhile (s1>) $ takeWhile (limit-s1>) $! abundants ]
+        abundants = [n | n<-[12..limit], isAbundant n]
+        sieve :: UArray Int Bool
+        sieve = runSTUArray $ do
+            let a = abundants :: [Int]
+            sumAbundants <- newArray (1,limit) False
+            forM_ a $ \s1 -> do
+                forM_ a $ \s2 -> do
+                    if (s1+s2<=limit) then unsafeWrite sumAbundants (s1+s2) True else return ()
+            return sumAbundants
+        findInSieve b = elemIndices b $ B.elems sieve
+        sumAbundants = findInSieve True
+        notSumAbundants = findInSieve False
 
 -- Problem 24
 perm :: [a] -> [[a]]
@@ -397,6 +431,6 @@ problem25 = head $ dropWhile (\x -> length (snd x) < 1000) $ zip [1..] $ map sho
 
 -- | The main entry point.
 main :: IO ()
-main = putStrLn $ show $ map primeFactors [1..10000]
+main = putStrLn $ show $ problem23
 
 
