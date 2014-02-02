@@ -427,10 +427,40 @@ problem24 = head $ drop (10^6-1) $ perm [1..9]
 -- Problem 25
 problem25 = head $ dropWhile (\x -> length (snd x) < 1000) $ zip [1..] $ map show fibs
 
+-- Problem 26
+
+reciprocalDigits = divStep 2 1
+    where
+        divStep base carry denominator = let (d,m) = carry `divMod` denominator in (d,carry) : (divStep base (base*m) denominator)
+
+findRepeatingElement n xs = runST $ do
+    visited <- (newArray (0,11*n) False) :: ST s (STUArray s Int Bool)
+    elem <- findRepeatingElement' visited xs
+    return elem
+    where
+        findRepeatingElement' visited (x:xs) = do
+            r <- unsafeRead visited x
+            if r then return x else do
+                unsafeWrite visited x True
+                findRepeatingElement' visited xs
+
+problem26 = maximum $ zip (map cycleLength [1..1000]) [1..]
+    where
+        cycleLength n = 1 + (length $ takeWhile ((rep n) /=) $ tail $ dropWhile ((rep n) /=) $ reminders n)
+        rep n = findRepeatingElement n $ reminders n
+        reminders n = map (\x -> fromIntegral x :: Int) $ map snd $ reciprocalDigits n
+
+
+problem26' = maximum [(multiplicativeOrder n, n) | n<- [2..100], n `mod` 5 /= 0, n `mod` 2 /= 0]
+    where
+        multiplicativeOrder n = head [d | d <- [1..], ((10^d)-1) `mod` n == 0 ]
+
+-- Problem 27
+
 
 
 -- | The main entry point.
 main :: IO ()
-main = putStrLn $ show $ problem23
+main = putStrLn $ show $ problem26'
 
 
