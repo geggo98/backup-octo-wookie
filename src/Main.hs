@@ -100,11 +100,11 @@ nPrimes n = toList $ nPrimes' (Seq.fromList [2,3,5,7,11,13,17]) 19 n
 
 nPrimes' :: Seq.Seq Integer -> Integer -> Int -> Seq.Seq Integer
 nPrimes' primes i n
-    | isPrime' primes i && (Seq.length primes)+1>=n = primes Seq.|> i
-    | isPrime' primes i = nPrimes' (primes Seq.|> i) (i+2) n
+    | isPrime2 primes i && (Seq.length primes)+1>=n = primes Seq.|> i
+    | isPrime2 primes i = nPrimes' (primes Seq.|> i) (i+2) n
     | otherwise = nPrimes' primes (i+2) n
 
-isPrime' primes n = 0 == Seq.length (Seq.dropWhileL (\i -> n `mod` i /= 0) $ Seq.takeWhileL (\i -> i*i<=n) primes)
+isPrime2 primes n = 0 == Seq.length (Seq.dropWhileL (\i -> n `mod` i /= 0) $ Seq.takeWhileL (\i -> i*i<=n) primes)
 
 problem7 = head $ reverse $ nPrimes 10001
 
@@ -456,11 +456,51 @@ problem26' = maximum [(multiplicativeOrder n, n) | n<- [2..100], n `mod` 5 /= 0,
         multiplicativeOrder n = head [d | d <- [1..], ((10^d)-1) `mod` n == 0 ]
 
 -- Problem 27
+isPrime = Memo.arrayRange (1,10000) isPrime'
+isPrime' n
+    | n > 1 = not $ any (\i -> n `mod` i == 0 ) $ primesToLimit $ (+) 1 $ intSquareRoot n
+    | otherwise = False
 
+--f(0) = b must be prime, f(a0+1)<0 is not a prime, f(b) is divisible by b
+problem27 = maximum [(length $ consecutivePrimes (qPoly a b), a, b, a*b) | let limit=2000,
+    b<-dropWhile (80>) $ primesToLimit (limit+1), let a0=2*intSquareRoot b, a1 <- [0..a0+1], a2<- [-1,1], let a=a1*a2]
+    where
+        consecutivePrimes f = takeWhile isPrime [f x | x <- [0..]]
+        qPoly a b n = n^2+a*n+b
+
+-- Problem 28
+data SpiralDirection=DirUp|DirDown|DirLeft|DirRight deriving (Eq, Show)
+
+nextDirection (x,y,m,d)
+    | d == DirDown, y <= -m = DirLeft
+    | d == DirLeft, x <= -m = DirUp
+    | d == DirUp,   y >= m  = DirRight
+    | d == DirRight,x >= m  = DirDown
+    | otherwise           = d
+
+moveSpiral p@(x,y,m,d) = (x', y', m', d')
+    where
+        (x',y')
+            | d == DirDown = (x,y-1)
+            | d == DirLeft = (x-1,y)
+            | d == DirUp   = (x,y+1)
+            | d == DirRight= (x+1,y)
+        d'= nextDirection p
+        m'
+            | y>0, x == -y = m+1
+            | otherwise    = m
+
+spiral =  iterate moveSpiral (0,0,0,DirRight)
+
+problem28 = product $ map fst $ filter (isDiagonal . snd) $ take (1001 ^ 2) $ zip [1..] spiral
+    where
+        isDiagonal (x,y,_,_) = (abs x) == (abs y)
+
+problem28' = product $ concat [[n^2, n^2-n+1, n^2-2*n-2, n^2-3*n-3] | n <- [1..1001]]
+
+-- Problem 29
 
 
 -- | The main entry point.
 main :: IO ()
-main = putStrLn $ show $ problem26'
-
-
+main = putStrLn $ show $ problem28'
