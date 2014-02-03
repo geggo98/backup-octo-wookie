@@ -29,6 +29,8 @@ import qualified Data.Sequence as Seq
 import Data.List (maximumBy)
 import Data.Function (on)
 
+import qualified Data.Set as Set
+
 import Data.List.Split (splitOn, chunksOf)
 --import qualified Data.Array.Repa as R -- Currently no repa on FPcomplete available
 import qualified Data.Vector as V
@@ -499,8 +501,21 @@ problem28 = product $ map fst $ filter (isDiagonal . snd) $ take (1001 ^ 2) $ zi
 problem28' = product $ concat [[n^2, n^2-n+1, n^2-2*n-2, n^2-3*n-3] | n <- [1..1001]]
 
 -- Problem 29
+problem29 = Set.size $ Set.fromList [a^b | a <- [1..100], b <- [1..100]]
 
+-- Problem 30
+problem30 = sum $ [n | n <-[1 .. 6*(9^5)+1], digitPowerSum 5 n == n]
+    where
+        digitPowerSum p n = sum $ map (\d -> d ^ p) $ map (\d -> fromIntegral d :: Integer) $ map digitToInt $ show n
+
+-- Problem 31
+coins :: Integer -> [Integer] -> [[Integer]]
+coins _ [] = []
+coins n (1:[]) = [[n]]
+coins remainder (c:cs) = [ n:ls | n <- [1..(remainder `div` c)], ls <- coins (remainder-n*c) cs]
+
+problem31 = length $ coins 200 [200, 100, 50, 20, 10, 5, 2, 1]
 
 -- | The main entry point.
 main :: IO ()
-main = putStrLn $ show $ problem28'
+main = putStrLn $ show $ problem31
